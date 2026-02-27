@@ -11,24 +11,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid messages" });
   }
 
-  const API_KEY = process.env.ANTHROPIC_API_KEY;
+  const API_KEY = process.env.GROQ_API_KEY;
   if (!API_KEY) {
-    return res.status(500).json({ error: "API key not configured." });
+    return res.status(500).json({ error: "API key not configured. Add GROQ_API_KEY in Vercel environment variables." });
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 1024,
-        system: "You are Subodh_AI, a smart, warm, and helpful personal AI assistant created by Subodh. Be clear, concise, and friendly. Use markdown code blocks when sharing code.",
-        messages,
+        messages: [
+          {
+            role: "system",
+            content: "You are Subodh_AI, a smart, warm, and helpful personal AI assistant created by Subodh. Be clear, concise, and friendly. Use markdown code blocks when sharing code.",
+          },
+          ...messages,
+        ],
       }),
     });
 
@@ -38,7 +42,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    const reply = data.content?.map((b) => b.text || "").join("") || "No response.";
+    const reply = data.choices?.[0]?.message?.content || "No response.";
     res.status(200).json({ reply });
   } catch (err) {
     console.error(err);
